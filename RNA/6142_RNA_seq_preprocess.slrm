@@ -1,0 +1,51 @@
+#!/bin/bash
+#SBATCH --mail-user=adam.x.miranda@vanderbilt.edu
+#SBATCH --mail-type=ALL
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=8
+#SBATCH --time=24:00:00
+#SBATCH --mem=64G
+#SBATCH --output=RNAseq-%j.out
+#SBATCH --error=RNAseq-%j.error
+#SBATCH --job-name=RNAseq-%j
+#SBATCH --account=park_lab
+#######################################################
+#This is a slurm script for processing fastq files.
+#This script will first trim fastq files and then perform QC.
+#Trimmed reads are then mapped to the human genome, converted to bam and filtered to remove mtDNA and blacklisted regions.
+#Input is .fastq.gz and output is .html/.fq/.sam/.bam
+#When submitting job: sbatch ATAC-STARR_preprocessing.slrm replicate1_siRNA_Controls
+#Example filename: replicate1_CRISPRi_Controls (First is the cell line, second is the library origin)
+#######################################################
+#Load modules
+module load GCC/5.4.0-2.26
+module load cutadapt/1.9.1-Python-3.5.2
+module load SAMtools/1.5
+#Set variables and paths. Set working directory as DIR, set path to input read file(s) (two files if paired-end), set filename for combined file after mappi$
+INDEX='/data/hodges_lab/hg38_genome/hg38_GTF32_index'
+DIR='/data/park_lab/adam/Park_6142'
+RUN=$1
+filename=$2
+INPUT_R1="${DIR}/raw_reads/${RUN}_R1_001.fastq.gz"
+INPUT_R2="${DIR}/raw_reads/${RUN}_R2_001.fastq.gz"
+#Echo variables to keep track in .out or .err files
+date
+pwd
+echo "$RUN"
+echo "$INPUT_R1"
+echo "$INPUT_R2"
+echo "$filename"
+#Trim reads and assess quality with Trim Galore! 8-12hrs. #The input files can be zipped.
+echo "trimming ${filename}"
+trim_galore --fastqc --fastqc_args "--outdir ${DIR}/fastQC" --paired --retain_unpaired --output_dir ${DIR}/trimmed_reads ${INPUT_R1} ${INPUT_R2}
+echo "trimming complete"
+
+# module load GCC/6.4.0-2.28
+# module load STAR/2.5.4b
+# ##Map reads to the human genome##
+# echo "mapping ${filename}"
+# echo "index used: ${INDEX}"
+# STAR --runMode alignReads --runThreadN 8 --genomeDir ${INDEX} --readFilesCommand zcat \
+# --readFilesIn ${DIR}/trimmed_reads/${RUN}_R1_001_val_1.fq.gz ${DIR}/trimmed_reads/${RUN}_R2_001_val_2.fq.gz --outFileNamePrefix ${DIR}/mapped_reads/${filename}.sam
+# echo "finished mapping ${filename}"

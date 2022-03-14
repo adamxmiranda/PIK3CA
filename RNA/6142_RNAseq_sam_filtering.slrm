@@ -1,0 +1,51 @@
+#!/bin/bash
+#SBATCH --mail-user=adam.x.miranda@vanderbilt.edu
+#SBATCH --mail-type=ALL
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=8
+#SBATCH --time=24:00:00
+#SBATCH --mem=64G
+#SBATCH --output=rnaseq_samfiltering-%j.out
+#SBATCH --error=rnaseq_samfiltering-%j.error
+#SBATCH --job-name=rnaseq_samfiltering
+#SBATCH --account=park_lab
+#######################################################
+#This is a slurm script for processing fastq files.
+#This script will first trim fastq files and then perform QC.
+#Trimmed reads are then mapped to the human genome, converted to bam and filtered to remove mtDNA and blacklisted regions.
+#Input is .fastq.gz and output is .html/.fq/.sam/.bam
+#When submitting job: sbatch ATAC-STARR_preprocessing.slrm replicate1_siRNA
+#Example filename: replicate1_CRISPRi_Controls (First is the cell line, second is the library origin)
+#######################################################
+#Load modules
+module load GCC/5.4.0-2.26
+module load cutadapt/1.9.1-Python-3.5.2
+module load SAMtools/1.5
+#Set variables and paths. Set working directory as TJH, set path to input read file(s) (two files if paired-end), set filename for combined file after mapping
+INDEX='/data/hodges_lab/hg38_genome/hg38_GTF32_index'
+DIR='/data/park_lab/adam/Park_6142'
+# INPUT_R1="${DIR}/raw_reads/${RUN}_R1_001.fastq.gz"
+# INPUT_R2="${DIR}/raw_reads/${RUN}_R2_001.fastq.gz"
+#Echo variables to keep track in .out or .err files
+date
+pwd
+# echo "$INPUT_R1"
+# echo "$INPUT_R2"
+cd ${DIR}/mapped_reads
+for filename in *.sam
+do
+  echo ${filename}
+  base=`basename $filename .sam`
+  #Convert Sam to Bam and filter for MAPQ > 30, then sort by chromosome. -q filters for mapping quality scores > 30. -o is output.
+  echo "${filename}: convert sam to bam & filter for MAPQ > 30 & sort bam"
+  samtools view -@ 8 -S -b -q 30 ${DIR}/mapped_reads/${filename} | samtools sort - -@ 8 -n -o ${DIR}/mapped_reads/${base}.bam
+  #Sort filtered bams by name using -n flag. This sort file is often needed for postprocessing steps, keep this file and the .bl-filtered.bam file, which is sorted by chromosome.
+  #Sort alignments by leftmost coordinates, or by read name when -n is used
+  #Sorting the reads by name rather than by genomic position is necessary for counting paired-end read
+  echo "${filename}: sorting by read name"
+  samtools sort -@ 8 -n ${DIR}/mapped_reads/${base}.bam -o ${DIR}/filtered_reads/${base}.n-sorted.filtered.bam
+  echo "done with ${filename}"
+  #some files are sorted by name or position
+  #bam files by name and genomic position
+done

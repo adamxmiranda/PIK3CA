@@ -1,0 +1,19 @@
+#!/bin/bash
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --time=24:00:00
+#SBATCH --mem=16G
+#SBATCH --job-name=Vantage_LFTP_6142
+#SBATCH --output=Vantage_LFTP.out
+#SBATCH --error=Vantage_LFTP.error
+#SBATCH --mail-user=adam.x.miranda@vanderbilt.edu
+#SBATCH --mail-type=ALL
+#SBATCH --job-name="Vantage_LFTP"
+
+
+
+module load GCC/5.4.0-2.26 lftp
+
+cd /data/park_lab/adam/Park_6142
+
+lftp -c 'open ftp://shredder.file.vumc.org:21 -u 6142_Park:Q4uDKf4HO5NhIX/Z -e "set ssl:verify-certificate no"; mget *; bye'

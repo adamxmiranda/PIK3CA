@@ -1,0 +1,34 @@
+#!/bin/bash
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=12
+#SBATCH --time=18:00:00
+#SBATCH --mem=32G
+#SBATCH --job-name=featureCountsMOLM
+#SBATCH --output=featureCounts-%j.out
+#SBATCH --error=featureCounts-%j.error
+#SBATCH --mail-user=adam.x.miranda@vanderbilt.edu
+#SBATCH --mail-type=ALL
+#SBATCH --job-name="featureCounts"
+
+#######################################################
+#This is a slurm script for processing bam files.
+#This script will determine if the region each read is aligned to corresponds to a particular gene or exon and then summarize across the entire BAM file to get total read counts for each gene or exon.
+#Input is .n-sorted.filtered.bam and output is SubreadCounts.txt
+#When submitting job: sbatch ATAC-STARR_preprocessing.slrm replicate1_siRNA
+#Example filename: replicate1_CRISPRi_Controls (First is the cell line, second is the library origin)
+#######################################################
+DIR='/data/park_lab/adam/Park_642'
+cell_line=$1
+#a is the annotation file (the GTF used to make the index) and F is the format
+#O is allow multioverlap, T is number of threads
+#never want to normalize counts if you are using DESeq2 for differential analysis
+
+featureCounts -F GTF -a /data/hodges_lab/hg38_genome/gencode.v32.annotation.gtf -G /data/hodges_lab/hg38_genome/hg38.fa -o ${DIR}/feat_counts/featureCounts_all_samples_${cell_line}.txt -T 12 -O -t exon ${DIR}/filtered_reads/${cell_line}*.n-sorted.filtered.bam
+
+#-a: specifies path to GTF
+#-G (genome): provides the name of a FASTA-format file that contains the reference sequencesused in read mapping that produced the provided SAM/BAM files
+#-o: specifies path to, and name of the text output (count matrix)
+#-T: number of the threads; value should be between 1 and 32
+#-O: allowMultiOverlap; reads will be allowed to be assigned to more than one matched meta-feature (or feature if -f is specified)
+#-t: specifies feature type; 'exon' by default; a feature is an interval (range of positions)on one of the reference sequences; a meta-feature is a set of features that represents a biological construct of interest; features often correspond to exons and meta-features to genes
