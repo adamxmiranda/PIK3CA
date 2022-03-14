@@ -1,0 +1,133 @@
+#!/bin/bash
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=1
+#SBATCH --time=1:00:00
+#SBATCH --mem=8G
+#SBATCH --job-name=ATAC_TOBIAS_heatmap
+#SBATCH --output=ATAC_TOBIAS_heatmap-%j.out
+#SBATCH --error=ATAC_TOBIAS_heatmap-%j.error
+#SBATCH --mail-user=adam.x.miranda@vanderbilt.edu
+#SBATCH --mail-type=ALL
+
+
+#Tobias activation
+module load Anaconda3
+source activate TOBIAS_ENV
+
+#directories
+HEAT_DIR='/data/park_lab/adam/ATAC_heatmap'
+ATAC1_DIR='/data/park_lab/adam/ATAC/tobias'
+ATAC2_DIR='/data/park_lab/adam/ATAC2/tobias'
+
+
+#variables
+#must match symbol used by TOBIAS
+TF='SOX18_MA1563.1'
+TF2='TEAD1_MA0090.3'
+CELL_LINE1='H-Tert'
+CELL_LINE2='MCF10A'
+CELL_LINE3='MCF7'
+
+SIGNL_SUFFIX='filtered_0.05_corrected.bw'
+MOTIF_DIR_SUFF='filtered_0.05'
+BB_SUFF='filtered_0.05_bound.bed'
+UB_SUFF='filtered_0.05_unbound.bed'
+
+#single cell lineage comparisons
+#for first TF
+#H-Tert
+TOBIAS PlotHeatmap \
+      --TFBS ${ATAC1_DIR}/motifs_${CELL_LINE1}_WT_${MOTIF_DIR_SUFF}/${TF}/beds/${TF}_${CELL_LINE1}_WT_${BB_SUFF} \
+      ${ATAC1_DIR}/motifs_${CELL_LINE1}_WT_${MOTIF_DIR_SUFF}/${TF}/beds/${TF}_${CELL_LINE1}_WT_${UB_SUFF} \
+      --TFBS ${ATAC1_DIR}/motifs_${CELL_LINE1}_E545K_${MOTIF_DIR_SUFF}/${TF}/beds/${TF}_${CELL_LINE1}_E545K_${BB_SUFF} \
+      ${ATAC1_DIR}/motifs_${CELL_LINE1}_E545K_${MOTIF_DIR_SUFF}/${TF}/beds/${TF}_${CELL_LINE1}_E545K_${UB_SUFF} \
+      --TFBS ${ATAC1_DIR}/motifs_${CELL_LINE1}_H1047R_${MOTIF_DIR_SUFF}/${TF}/beds/${TF}_${CELL_LINE1}_H1047R_${BB_SUFF} \
+      ${ATAC1_DIR}/motifs_${CELL_LINE1}_H1047R_${MOTIF_DIR_SUFF}/${TF}/beds/${TF}_${CELL_LINE1}_H1047R_${UB_SUFF} \
+      --signals ${ATAC1_DIR}/${CELL_LINE1}_WT_${SIGNL_SUFFIX} \
+                ${ATAC1_DIR}/${CELL_LINE1}_E545K_${SIGNL_SUFFIX} \
+                ${ATAC1_DIR}/${CELL_LINE1}_H1047R_${SIGNL_SUFFIX} \
+      --output ${HEAT_DIR}/${TF}_${CELL_LINE1}_heatmap.png \
+      --signal_labels ${CELL_LINE1}_WT ${CELL_LINE1}_E545K ${CELL_LINE1}_H1047R \
+      --share_colorbar --sort_by -1
+
+#MCF10A
+#located in the second ATAC run folders
+TOBIAS PlotHeatmap \
+      --TFBS ${ATAC2_DIR}/motifs_${CELL_LINE2}_WT_${MOTIF_DIR_SUFF}/${TF}/beds/${TF}_${CELL_LINE2}_WT_${BB_SUFF} \
+      ${ATAC2_DIR}/motifs_${CELL_LINE2}_WT_${MOTIF_DIR_SUFF}/${TF}/beds/${TF}_${CELL_LINE2}_WT_${UB_SUFF} \
+      --TFBS ${ATAC2_DIR}/motifs_${CELL_LINE2}_E545K_${MOTIF_DIR_SUFF}/${TF}/beds/${TF}_${CELL_LINE2}_E545K_${BB_SUFF} \
+      ${ATAC2_DIR}/motifs_${CELL_LINE2}_E545K_${MOTIF_DIR_SUFF}/${TF}/beds/${TF}_${CELL_LINE2}_E545K_${UB_SUFF} \
+      --TFBS ${ATAC2_DIR}/motifs_${CELL_LINE2}_H1047R_${MOTIF_DIR_SUFF}/${TF}/beds/${TF}_${CELL_LINE2}_H1047R_${BB_SUFF} \
+      ${ATAC2_DIR}/motifs_${CELL_LINE2}_H1047R_${MOTIF_DIR_SUFF}/${TF}/beds/${TF}_${CELL_LINE2}_H1047R_${UB_SUFF} \
+      --signals ${ATAC2_DIR}/${CELL_LINE2}_WT_${SIGNL_SUFFIX} \
+                ${ATAC2_DIR}/${CELL_LINE2}_E545K_${SIGNL_SUFFIX} \
+                ${ATAC2_DIR}/${CELL_LINE2}_H1047R_${SIGNL_SUFFIX} \
+      --output ${HEAT_DIR}/${TF}_${CELL_LINE2}_heatmap.png \
+      --signal_labels ${CELL_LINE2}_WT ${CELL_LINE2}_E545K ${CELL_LINE2}_H1047R \
+      --share_colorbar --sort_by -1
+#
+#cancer cells
+#Split across run folders and of course T47D naming convention is different
+TOBIAS PlotHeatmap \
+      --TFBS ${ATAC1_DIR}/motifs_${CELL_LINE3}_WT_${MOTIF_DIR_SUFF}/${TF}/beds/${TF}_${CELL_LINE3}_WT_${BB_SUFF} \
+      ${ATAC1_DIR}/motifs_${CELL_LINE3}_WT_${MOTIF_DIR_SUFF}/${TF}/beds/${TF}_${CELL_LINE3}_WT_${UB_SUFF} \
+      --TFBS ${ATAC1_DIR}/motifs_${CELL_LINE3}_E545K_${MOTIF_DIR_SUFF}/${TF}/beds/${TF}_${CELL_LINE3}_E545K_${BB_SUFF} \
+      ${ATAC1_DIR}/motifs_${CELL_LINE3}_E545K_${MOTIF_DIR_SUFF}/${TF}/beds/${TF}_${CELL_LINE3}_E545K_${UB_SUFF} \
+      --TFBS ${ATAC2_DIR}/motifs_T47D_${MOTIF_DIR_SUFF}/${TF}/beds/${TF}_T47D_${BB_SUFF} \
+      ${ATAC2_DIR}/motifs_T47D_${MOTIF_DIR_SUFF}/${TF}/beds/${TF}_T47D_${UB_SUFF} \
+      --signals ${ATAC1_DIR}/${CELL_LINE3}_WT_${SIGNL_SUFFIX} \
+                ${ATAC1_DIR}/${CELL_LINE3}_E545K_${SIGNL_SUFFIX} \
+                ${ATAC2_DIR}/T47D_${SIGNL_SUFFIX} \
+      --output ${HEAT_DIR}/${TF}_cancer_heatmap.png \
+      --signal_labels ${CELL_LINE3}_WT ${CELL_LINE3}_E545K T47D_H1047R \
+      --share_colorbar --sort_by -1
+
+
+#for second TF
+H-Tert
+TOBIAS PlotHeatmap \
+      --TFBS ${ATAC1_DIR}/motifs_${CELL_LINE1}_WT_${MOTIF_DIR_SUFF}/${TF2}/beds/${TF2}_${CELL_LINE1}_WT_${BB_SUFF} \
+      ${ATAC1_DIR}/motifs_${CELL_LINE1}_WT_${MOTIF_DIR_SUFF}/${TF2}/beds/${TF2}_${CELL_LINE1}_WT_${UB_SUFF} \
+      --TFBS ${ATAC1_DIR}/motifs_${CELL_LINE1}_E545K_${MOTIF_DIR_SUFF}/${TF2}/beds/${TF2}_${CELL_LINE1}_E545K_${BB_SUFF} \
+      ${ATAC1_DIR}/motifs_${CELL_LINE1}_E545K_${MOTIF_DIR_SUFF}/${TF2}/beds/${TF2}_${CELL_LINE1}_E545K_${UB_SUFF} \
+      --TFBS ${ATAC1_DIR}/motifs_${CELL_LINE1}_H1047R_${MOTIF_DIR_SUFF}/${TF2}/beds/${TF2}_${CELL_LINE1}_H1047R_${BB_SUFF} \
+      ${ATAC1_DIR}/motifs_${CELL_LINE1}_H1047R_${MOTIF_DIR_SUFF}/${TF2}/beds/${TF2}_${CELL_LINE1}_H1047R_${UB_SUFF} \
+      --signals ${ATAC1_DIR}/${CELL_LINE1}_WT_${SIGNL_SUFFIX} \
+                ${ATAC1_DIR}/${CELL_LINE1}_E545K_${SIGNL_SUFFIX} \
+                ${ATAC1_DIR}/${CELL_LINE1}_H1047R_${SIGNL_SUFFIX} \
+      --output ${HEAT_DIR}/${TF2}_${CELL_LINE1}_heatmap.png \
+      --signal_labels ${CELL_LINE1}_WT ${CELL_LINE1}_E545K ${CELL_LINE1}_H1047R \
+      --share_colorbar --sort_by -1
+
+MCF10A
+located in the second ATAC run folders
+TOBIAS PlotHeatmap \
+      --TFBS ${ATAC2_DIR}/motifs_${CELL_LINE2}_WT_${MOTIF_DIR_SUFF}/${TF2}/beds/${TF2}_${CELL_LINE2}_WT_${BB_SUFF} \
+      ${ATAC2_DIR}/motifs_${CELL_LINE2}_WT_${MOTIF_DIR_SUFF}/${TF2}/beds/${TF2}_${CELL_LINE2}_WT_${UB_SUFF} \
+      --TFBS ${ATAC2_DIR}/motifs_${CELL_LINE2}_E545K_${MOTIF_DIR_SUFF}/${TF2}/beds/${TF2}_${CELL_LINE2}_E545K_${BB_SUFF} \
+      ${ATAC2_DIR}/motifs_${CELL_LINE2}_E545K_${MOTIF_DIR_SUFF}/${TF2}/beds/${TF2}_${CELL_LINE2}_E545K_${UB_SUFF} \
+      --TFBS ${ATAC2_DIR}/motifs_${CELL_LINE2}_H1047R_${MOTIF_DIR_SUFF}/${TF2}/beds/${TF2}_${CELL_LINE2}_H1047R_${BB_SUFF} \
+      ${ATAC2_DIR}/motifs_${CELL_LINE2}_H1047R_${MOTIF_DIR_SUFF}/${TF2}/beds/${TF2}_${CELL_LINE2}_H1047R_${UB_SUFF} \
+      --signals ${ATAC2_DIR}/${CELL_LINE2}_WT_${SIGNL_SUFFIX} \
+                ${ATAC2_DIR}/${CELL_LINE2}_E545K_${SIGNL_SUFFIX} \
+                ${ATAC2_DIR}/${CELL_LINE2}_H1047R_${SIGNL_SUFFIX} \
+      --output ${HEAT_DIR}/${TF2}_${CELL_LINE2}_heatmap.png \
+      --signal_labels ${CELL_LINE2}_WT ${CELL_LINE2}_E545K ${CELL_LINE2}_H1047R \
+      --share_colorbar --sort_by -1
+
+#cancer cells
+#Split across run folders and of course T47D naming convention is different
+TOBIAS PlotHeatmap \
+      --TFBS ${ATAC1_DIR}/motifs_${CELL_LINE3}_WT_${MOTIF_DIR_SUFF}/${TF2}/beds/${TF2}_${CELL_LINE3}_WT_${BB_SUFF} \
+      ${ATAC1_DIR}/motifs_${CELL_LINE3}_WT_${MOTIF_DIR_SUFF}/${TF2}/beds/${TF2}_${CELL_LINE3}_WT_${UB_SUFF} \
+      --TFBS ${ATAC1_DIR}/motifs_${CELL_LINE3}_E545K_${MOTIF_DIR_SUFF}/${TF2}/beds/${TF2}_${CELL_LINE3}_E545K_${BB_SUFF} \
+      ${ATAC1_DIR}/motifs_${CELL_LINE3}_E545K_${MOTIF_DIR_SUFF}/${TF2}/beds/${TF2}_${CELL_LINE3}_E545K_${UB_SUFF} \
+      --TFBS ${ATAC2_DIR}/motifs_T47D_${MOTIF_DIR_SUFF}/${TF2}/beds/${TF2}_T47D_${BB_SUFF} \
+      ${ATAC2_DIR}/motifs_T47D_${MOTIF_DIR_SUFF}/${TF2}/beds/${TF2}_T47D_${UB_SUFF} \
+      --signals ${ATAC1_DIR}/${CELL_LINE3}_WT_${SIGNL_SUFFIX} \
+                ${ATAC1_DIR}/${CELL_LINE3}_E545K_${SIGNL_SUFFIX} \
+                ${ATAC2_DIR}/T47D_${SIGNL_SUFFIX} \
+      --output ${HEAT_DIR}/${TF2}_cancer_heatmap.png \
+      --signal_labels ${CELL_LINE3}_WT ${CELL_LINE3}_E545K T47D_H1047R \
+      --share_colorbar --sort_by -1

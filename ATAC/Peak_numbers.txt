@@ -1,0 +1,24 @@
+Peak numbers for significant peaks in each sample
+H-Tert
+WT at .05 significance
+101085
+ex9 at .05 significance
+84270
+ex20 at .05 significance
+61750
+
+MCF10A
+WT at .05 significance
+98910
+E545K at .05 significance
+89416
+H1047R at .05 significance
+106747
+
+Cancer cells
+MCF7WT at .05 significance
+260809
+MCF7E545K at .05 significance
+77187
+T47D_H1047R at .05 significance
+72042

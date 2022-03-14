@@ -1,0 +1,40 @@
+#!/bin/bash
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=8
+#SBATCH --time=12:00:00
+#SBATCH --mem=64G
+#SBATCH --job-name=TOBIAS
+#SBATCH --output=TOBIAS-%j.out
+#SBATCH --error=TOBIAS-%j.error
+#SBATCH --mail-user=adam.x.miranda@vanderbilt.edu
+#SBATCH --mail-type=ALL
+#SBATCH --account=park_lab
+
+GENOME='/data/park_lab/adam/Homo_sapiens/UCSC/hg38/Sequence/WholeGenomeFasta/genome.fa'
+BAM_DIR='/data/park_lab/adam/ATAC/combined_reads'
+PROCESSED_DIR='/data/park_lab/adam/ATAC/tobias'
+NPEAK_DIR='/data/park_lab/adam/ATAC/combined_reads/genrich'
+JASPAR='/data/park_lab/adam/JASPAR/JASPAR2020_CORE_vertebrates_non-redundant_pfms_jaspar.txt'
+
+#Tobias activation
+module load Anaconda3
+source activate /home/mirandax/.conda/envs/TOBIAS_ENV
+
+#this first command is correcting for the bias of Tn5 cut sites, your output is a directory containing a *corrected.bw file and some others
+#peak bed must contain regions of interest which you would like to perform footprinting on
+#this loop will work on the p-value <.1 values
+cd ${BAM_DIR}
+
+
+echo "finish the last file"
+echo ".05 threshold"
+#this first command is correcting for the bias of Tn5 cut sites, your output is a directory containing a *corrected.bw file and some others
+#peak bed must contain regions of interest which you would like to perform footprinting on
+TOBIAS ATACorrect --bam ${BAM_DIR}/MCF7_WT.bam \
+--genome ${GENOME} \
+--peaks ${NPEAK_DIR}/MCF7_WT_filtered_0.05.narrowPeak \
+--outdir ${PROCESSED_DIR} \
+--prefix MCF7_WT_filtered_0.05 \
+--cores 8
+echo "done with last file"

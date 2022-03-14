@@ -1,0 +1,203 @@
+#!/bin/bash
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=12
+#SBATCH --time=2-00:00:00
+#SBATCH --mem=64G
+#SBATCH --job-name=TOBIAS
+#SBATCH --output=TOBIAS-%j.out
+#SBATCH --error=TOBIAS-%j.error
+#SBATCH --mail-user=adam.x.miranda@vanderbilt.edu
+#SBATCH --mail-type=ALL
+
+
+GENOME='/data/park_lab/adam/Homo_sapiens/UCSC/hg38/Sequence/WholeGenomeFasta/genome.fa'
+BAM_DIR='/data/park_lab/adam/ATAC/combined_reads'
+PROCESSED_DIR='/data/park_lab/adam/ATAC/tobias'
+NPEAK_DIR='/data/park_lab/adam/ATAC/combined_reads/genrich'
+JASPAR='/data/park_lab/adam/JASPAR/JASPAR2020_CORE_vertebrates_non-redundant_pfms_jaspar.txt'
+
+
+#samtools index the sorted bam files
+module load GCC/8.2.0 SAMtools/1.9
+cd ${BAM_DIR}
+for filename in *.bam
+do
+  echo "indexing $filename"
+  base=`basename $filename .bam`
+  samtools index -@8 ${BAM_DIR}/${base}.bam ${BAM_DIR}/${base}.bam.bai
+  echo "end index of $filename"
+done
+
+#Tobias activation
+module load Anaconda3
+source activate TOBIAS_ENV
+
+#this first command is correcting for the bias of Tn5 cut sites, your output is a directory containing a *corrected.bw file and some others
+#peak bed must contain regions of interest which you would like to perform footprinting on
+#this loop will work on the p-value <.1 values
+cd ${BAM_DIR}
+
+for filename in *.bam
+do
+  echo "correcting for tn5 bias $filename"
+  echo ".1 threshold"
+  base=`basename $filename .bam`
+  TOBIAS ATACorrect --bam ${BAM_DIR}/${base}.bam \
+  --genome ${GENOME} \
+  --peaks ${NPEAK_DIR}/${base}_filtered_0.1.narrowPeak \
+  --outdir ${PROCESSED_DIR} \
+  --prefix ${base}_filtered_0.1 \
+  --cores 8
+  echo "done with $filename"
+done
+# #additionally we will analyze the peaks at a p-value<.05 threshold
+for filename in *.bam
+do
+  echo "correcting for tn5 bias $filename"
+  echo ".05 threshold"
+  base=`basename $filename .bam`
+  #this first command is correcting for the bias of Tn5 cut sites, your output is a directory containing a *corrected.bw file and some others
+  #peak bed must contain regions of interest which you would like to perform footprinting on
+  TOBIAS ATACorrect --bam ${BAM_DIR}/${base}.bam \
+  --genome ${GENOME} \
+  --peaks ${NPEAK_DIR}/${base}_filtered_0.05.narrowPeak \
+  --outdir ${PROCESSED_DIR} \
+  --prefix ${base}_filtered_0.05 \
+  --cores 8
+  echo "done with $filename"
+done
+
+#This function will look for dips in accessiblity that mark the presence of TFbinding
+#outlines where TFs might be
+#this loop will work over both significance thresholds
+cd ${PROCESSED_DIR}
+for filename in *_corrected.bw
+do
+  echo "scoring footprints of $filename"
+  base=`basename $filename _corrected.bw`
+  TOBIAS FootprintScores --signal ${PROCESSED_DIR}/${base}_corrected.bw \
+  --regions ${NPEAK_DIR}/${base}.narrowPeak \
+  --output ${base}_footprints.bw \
+  --cores 8
+  echo "end scoring $filename"
+done
+
+#This function will identify which TFs are binding in the identified footprint sites
+#Will do single condition and differential binding analyses
+#single condition loop
+for filename in *_footprints.bw
+do
+  echo "identifying TFs in $filename footprints"
+  base=`basename $filename _footprints.bw`
+  TOBIAS BINDetect --motifs ${JASPAR} \
+  --signals ${PROCESSED_DIR}/${base}_footprints.bw \
+  --genome ${GENOME} \
+  --peaks ${NPEAK_DIR}/${base}.narrowPeak \
+  --outdir ${PROCESSED_DIR}/motifs_${base} \
+  --cond_names ${base} \
+  --cores 8
+done
+
+#comparative analyses
+module load GCC/8.2.0 BEDTools/2.28.0
+#loop to combine bed files to serve as regions for the differential analyses
+cd ${BAM_DIR}
+for cellline in *_WT.bed
+do
+  base=`basename $cellline _WT.bed`
+  echo "concatenate each bedfile for ${base} cell line"
+  cat ${base}_WT.bed ${base}_E545K.bed ${base}_H1047R.bed > ${base}_cat.bed
+  echo "sort prior to merge"
+  # a lower memory usage sorting function than bedtools sort
+  sort -k 1,1 -k2,2n ${base}_cat.bed > ${base}_cat_sorted.bed
+  echo "merging .bed for $base"
+  bedtools merge -i ${base}_cat_sorted.bed > ${base}.bed
+  echo "done merging"
+done
+###Using the regions from the combined bed file resulted in TOBIAS getting stuck
+###around 85%
+
+#New approach will be to use significant peaks from combined BAM files
+module load GCC/8.2.0 SAMtools/1.9
+cd ${BAM_DIR}
+#first lets combine all sorted bam files into one
+for filename in *_WT.n-sorted.bam
+do
+  cellline=`basename $filename _WT.n-sorted.bam`
+  echo "merge bams for $cellline"
+  samtools merge -@ 8 ${cellline}_combined.bam \
+          ${cellline}_WT.n-sorted.bam \
+          ${cellline}_E545K.n-sorted.bam \
+          ${cellline}_H1047R.n-sorted.bam
+  echo "done merging"
+done
+
+#now let's do peak calling on the combined bedfile to make a smaller region file
+GENR_DIR='/data/park_lab/adam/ATAC/combined_reads/genrich'
+for filename in *_combined.bam
+do
+  echo "genrich for ${filename} at .1 p-threshold"
+  base=`basename $filename _combined.bam`
+  Genrich -t ${BAM_DIR}/${base}_combined.bam \
+          -o ${GENR_DIR}/${base}_combined_filtered_0.1.narrowPeak \
+          -f ${GENR_DIR}/${base}_combined_filtered_0.1.pqvalues.bed \
+          -r -e chrX,chrY \
+          -j -p 0.1 -v
+  echo "${filename} genrich complete for 0.1"
+
+  echo "genrich for ${filename} at .05 p-threshold"
+  Genrich -t ${BAM_DIR}/${base}_combined.bam \
+          -o ${GENR_DIR}/${base}_combined_filtered_0.05.narrowPeak \
+          -f ${GENR_DIR}/${base}_combined_filtered_0.05.pqvalues.bed \
+          -r -e chrX,chrY \
+          -j -p 0.05 -v
+  echo "${filename} genrich complete for 0.05"
+done
+
+
+cd ${PROCESSED_DIR}
+for filename in *_WT_filtered_0.05_footprints.bw
+do
+  cellline=`basename $filename _WT_filtered_0.05_footprints.bw`
+  echo "comparing TFs across ${cellline} footprints"
+  TOBIAS BINDetect --motifs ${JASPAR} \
+  --signals ${PROCESSED_DIR}/${cellline}_WT_filtered_0.05_footprints.bw \
+            ${PROCESSED_DIR}/${cellline}_E545K_filtered_0.05_footprints.bw \
+            ${PROCESSED_DIR}/${cellline}_H1047R_filtered_0.05_footprints.bw \
+  --genome ${GENOME} \
+  --peaks /data/park_lab/adam/ATAC/combined_reads/genrich/${cellline}_combined_filtered_0.05.narrowPeak \
+  --outdir ${PROCESSED_DIR}/comparative_motifs_${cellline} \
+  --cond_names ${cellline}_WT ${cellline}_E545K ${cellline}_H1047R \
+  --cores 12
+  echo "end comparative analyses of $cellline"
+done
+
+
+
+echo "merge bams for cancer cell lines"
+samtools merge -@ 8 /data/park_lab/adam/ATAC/combined_reads/cancer_combined.bam \
+        /data/park_lab/adam/ATAC/combined_reads/MCF7_WT.n-sorted.bam \
+        /data/park_lab/adam/ATAC/combined_reads/MCF7_E545K.n-sorted.bam \
+        /data/park_lab/adam/ATAC2/combined_reads/T47D.n-sorted.bam
+echo "done merging"
+
+echo "genrich for cancer at .05 p-threshold"
+Genrich -t /data/park_lab/adam/ATAC/combined_reads/cancer_combined.bam \
+        -o /data/park_lab/adam/ATAC/tobias/cancer_combined_filtered_0.05.narrowPeak \
+        -f /data/park_lab/adam/ATAC/tobias/cancer_combined_filtered_0.05.pqvalues.bed \
+        -r -e chrX,chrY \
+        -j -p 0.05 -v
+echo "cancer genrich complete for 0.05"
+
+echo "comparing TFs across cancer footprints"
+TOBIAS BINDetect --motifs ${JASPAR} \
+--signals /data/park_lab/adam/ATAC/tobias/MCF7_WT_filtered_0.05_footprints.bw \
+          /data/park_lab/adam/ATAC/tobias/MCF7_E545K_filtered_0.05_footprints.bw \
+          /data/park_lab/adam/ATAC2/tobias/T47D_filtered_0.05_footprints.bw \
+--genome ${GENOME} \
+--peaks /data/park_lab/adam/ATAC/tobias/cancer_combined_filtered_0.05.narrowPeak \
+--outdir ${PROCESSED_DIR}/comparative_motifs_cancer \
+--cond_names MCF7_WT MCF7_E545K T47D_H1047R \
+--cores 12
+echo "end comparative analyses of cancer"

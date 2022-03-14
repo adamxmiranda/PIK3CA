@@ -1,0 +1,100 @@
+#!/bin/bash
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=1
+#SBATCH --time=3-00:00:00
+#SBATCH --mem=64G
+#SBATCH --job-name=TOBIAS
+#SBATCH --output=TOBIAS-%j.out
+#SBATCH --error=TOBIAS-%j.error
+#SBATCH --mail-user=adam.x.miranda@vanderbilt.edu
+#SBATCH --mail-type=ALL
+
+
+GENOME='/data/park_lab/adam/Homo_sapiens/UCSC/hg38/Sequence/WholeGenomeFasta/genome.fa'
+BAM_DIR1='/data/park_lab/adam/ATAC/combined_reads'
+BAM_DIR2='/data/park_lab/adam/ATAC2/combined_reads'
+PROCESSED_DIR='/data/park_lab/adam/ATAC/tobias'
+BED_DIR='/data/park_lab/adam/ATAC/featCounts'
+JASPAR='/data/park_lab/adam/JASPAR/JASPAR2020_CORE_vertebrates_non-redundant_pfms_jaspar.txt'
+
+cd /data/park_lab/adam/ATAC/enriched_peaks
+
+#load the modules for bedtools
+module load GCC/8.2.0 BEDTools/2.28.0
+
+#Intersect enriched peaks with cell lineage consensus bed files
+##Cancer Files
+bedtools intersect -abam ${BAM_DIR1}/cancer_combined.bam \
+                   -b ${BED_DIR}/cancer_WT_enr_WTvH1047R_simple_noHead_seek.bed >\
+                   cancer_WT_enr_WTvH1047R_simple.bam
+
+bedtools intersect -abam ${BAM_DIR1}/cancer_combined.bam \
+                   -b ${BED_DIR}/cancer_WT_enr_WTvE545K_simple_noHead_seek.bed >\
+                   cancer_WT_enr_WTvE545K_simple.bam
+
+bedtools intersect -abam ${BAM_DIR1}/cancer_combined.bam \
+                   -b ${BED_DIR}/cancer_H1047R_enr_WTvH1047R_simple_noHead_seek.bed >\
+                   cancer_H1047R_enr_WTvH1047R_simple.bam
+
+bedtools intersect -abam ${BAM_DIR1}/cancer_combined.bam \
+                   -b ${BED_DIR}/cancer_H1047R_enr_E545KvH1047R_simple_noHead_seek.bed >\
+                   cancer_H1047R_enr_E545KvH1047R_simple.bam
+
+bedtools intersect -abam ${BAM_DIR1}/cancer_combined.bam \
+                   -b ${BED_DIR}/cancer_E545K_enr_WTvE545K_simple_noHead_seek.bed >\
+                   cancer_E545K_enr_WTvE545K_simple.bam
+
+bedtools intersect -abam ${BAM_DIR1}/cancer_combined.bam \
+                   -b ${BED_DIR}/cancer_E545K_enr_E545KvH1047R_simple_noHead_seek.bed >\
+                   cancer_E545K_enr_E545KvH1047R_simple.bam
+
+##HTert Files
+bedtools intersect -abam ${BAM_DIR1}/H-Tert_combined.bam \
+                  -b ${BED_DIR}/HTert_WT_enr_WTvH1047R_simple_noHead_seek.bed >\
+                  HTert_WT_enr_WTvH1047R_simple.bam
+
+bedtools intersect -abam ${BAM_DIR1}/H-Tert_combined.bam \
+                  -b ${BED_DIR}/HTert_WT_enr_WTvE545K_simple_noHead_seek.bed >\
+                  HTert_WT_enr_WTvE545K_simple.bam
+
+bedtools intersect -abam ${BAM_DIR1}/H-Tert_combined.bam \
+                  -b ${BED_DIR}/HTert_H1047R_enr_WTvH1047R_simple_noHead_seek.bed >\
+                  HTert_H1047R_enr_WTvH1047R_simple.bam
+
+bedtools intersect -abam ${BAM_DIR1}/H-Tert_combined.bam \
+                  -b ${BED_DIR}/HTert_H1047R_enr_E545KvH1047R_simple_noHead_seek.bed >\
+                  HTert_H1047R_enr_E545KvH1047R_simple.bam
+
+bedtools intersect -abam ${BAM_DIR1}/H-Tert_combined.bam \
+                  -b ${BED_DIR}/HTert_E545K_enr_WTvE545K_simple_noHead_seek.bed >\
+                  HTert_E545K_enr_WTvE545K_simple.bam
+
+bedtools intersect -abam ${BAM_DIR1}/H-Tert_combined.bam \
+                  -b ${BED_DIR}/HTert_E545K_enr_E545KvH1047R_simple_noHead_seek.bed >\
+                  HTert_E545K_enr_E545KvH1047R_simple.bam
+
+##MCF10A Files
+bedtools intersect -abam ${BAM_DIR1}/MCF10A_combined.bam \
+                  -b ${BED_DIR}/MCF10A_WT_enr_WTvH1047R_simple_noHead_seek.bed >\
+                  MCF10A_WT_enr_WTvH1047R_simple.bam
+
+bedtools intersect -abam ${BAM_DIR1}/MCF10A_combined.bam \
+                  -b ${BED_DIR}/MCF10A_WT_enr_WTvE545K_simple_noHead_seek.bed >\
+                  MCF10A_WT_enr_WTvE545K_simple.bam
+
+bedtools intersect -abam ${BAM_DIR1}/MCF10A_combined.bam \
+                  -b ${BED_DIR}/MCF10A_H1047R_enr_WTvH1047R_simple_noHead_seek.bed >\
+                  MCF10A_H1047R_enr_WTvH1047R_simple.bam
+
+bedtools intersect -abam ${BAM_DIR1}/MCF10A_combined.bam \
+                  -b ${BED_DIR}/MCF10A_H1047R_enr_E545KvH1047R_simple_noHead_seek.bed >\
+                  MCF10A_H1047R_enr_E545KvH1047R_simple.bam
+
+bedtools intersect -abam ${BAM_DIR1}/MCF10A_combined.bam \
+                  -b ${BED_DIR}/MCF10A_E545K_enr_WTvE545K_simple_noHead_seek.bed >\
+                  MCF10A_E545K_enr_WTvE545K_simple.bam
+
+bedtools intersect -abam ${BAM_DIR1}/MCF10A_combined.bam \
+                  -b ${BED_DIR}/MCF10A_E545K_enr_E545KvH1047R_simple_noHead_seek.bed >\
+                  MCF10A_E545K_enr_E545KvH1047R_simple.bam

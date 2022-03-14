@@ -1,0 +1,49 @@
+#!/bin/bash
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=1
+#SBATCH --time=12:00:00
+#SBATCH --mem=16G
+#SBATCH --job-name=combine_ATAC_reps
+#SBATCH --output=combine_ATAC_reps-%j.out
+#SBATCH --error=combine_ATAC_reps-%j.error
+#SBATCH --mail-user=adam.x.miranda@vanderbilt.edu
+#SBATCH --mail-type=ALL
+#SBATCH --account=park_lab
+
+#load SAMtools modules
+module load GCC/8.2.0 SAMtools/1.9
+FILT_DIR='/data/park_lab/adam/ATAC/filtered_reads'
+cd ${FILT_DIR}
+COMB_DIR='/data/park_lab/adam/ATAC/combined_reads'
+
+#Could not think of a great way to loop This
+echo "first cell line"
+samtools merge -f ${COMB_DIR}/MCF7_E545K.bam \
+${FILT_DIR}/6630-JK-1_bwa.unique.bam \
+${FILT_DIR}/6630-JK-2_bwa.unique.bam
+echo "end first"
+
+echo "second cell line"
+samtools merge -f ${COMB_DIR}/MCF7_WT.bam \
+${FILT_DIR}/6630-JK-3_bwa.unique.bam \
+${FILT_DIR}/6630-JK-4_bwa.unique.bam
+echo "end second"
+
+echo "third cell line"
+samtools merge -f ${COMB_DIR}/H-Tert_WT.bam \
+${FILT_DIR}/6630-JK-5_bwa.unique.bam \
+${FILT_DIR}/6630-JK-6_bwa.unique.bam
+echo "end third"
+
+echo "fourth cell line"
+samtools merge -f ${COMB_DIR}/H-Tert_E545K.bam \
+${FILT_DIR}/6630-JK-7_bwa.unique.bam \
+${FILT_DIR}/6630-JK-8_bwa.unique.bam
+echo "end fourth"
+
+echo "fifth cell line"
+samtools merge -f ${COMB_DIR}/H-Tert_H1047R.bam \
+${FILT_DIR}/6630-JK-9_bwa.unique.bam \
+${FILT_DIR}/6630-JK-11_bwa.unique.bam
+echo "end fifth"

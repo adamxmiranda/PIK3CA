@@ -1,0 +1,120 @@
+#!/bin/bash
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=12
+#SBATCH --time=5-00:00:00
+#SBATCH --mem=64G
+#SBATCH --job-name=Tobi2
+#SBATCH --output=Tobi2-%j.out
+#SBATCH --error=Tobi2-%j.error
+#SBATCH --mail-user=adam.x.miranda@vanderbilt.edu
+#SBATCH --mail-type=ALL
+
+GENOME='/data/park_lab/adam/Homo_sapiens/UCSC/hg38/Sequence/WholeGenomeFasta/genome.fa'
+PROCESSED_DIR='/data/park_lab/adam/ATAC/tobi2'
+NPEAK_DIR='/data/park_lab/adam/ATAC/combined_reads/genrich'
+JASPAR='/data/park_lab/adam/JASPAR/JASPAR2020_CORE_vertebrates_non-redundant_pfms_jaspar.txt'
+BED_DIR='/data/park_lab/adam/ATAC/featCounts'
+BEDT_GENOME='/data/park_lab/adam/Homo_sapiens/UCSC/hg38/Sequence/WholeGenomeFasta/chrom.sizes'
+BAM1_DIR='/data/park_lab/adam/ATAC/combined_reads'
+BAM2_DIR='/data/park_lab/adam/ATAC2/combined_reads'
+
+#make genome for bedtools, chromsizes
+# cd /data/park_lab/adam/Homo_sapiens/UCSC/hg38/Sequence/WholeGenomeFasta
+# cut -f 1,2 genome.fa.fai > chrom.sizes
+
+#
+# # #convert the consensus bed file used in feature counts to bam
+module load GCC/8.2.0 BEDTools/2.28.0 SAMtools/1.9
+# cd ${NPEAK_DIR}
+# # bedToBam -i consensus.narrowPeak \
+# #         -g ${BEDT_GENOME} \
+# #         > consensus.bam
+# samtools merge -f ${NPEAK_DIR}/consensus.bam ${BAM1_DIR}/cancer_combined.bam ${BAM1_DIR}/H-Tert_combined.bam ${BAM2_DIR}/MCF10A_combined.bam
+# #index the new bam file
+# samtools sort -@ 12 ${NPEAK_DIR}/consensus.bam > ${NPEAK_DIR}/consensus_sorted.bam
+# samtools index -@ 12 -b ${NPEAK_DIR}/consensus_sorted.bam ${NPEAK_DIR}/consensus_sorted.bam.bai
+
+#Tobias activation
+module load Anaconda3
+source activate TOBIAS_ENV
+
+# #correct
+# cd ${BED_DIR}
+# for filename in *_simple_noHead_seek.bed
+# do
+#   echo "correcting for tn5 bias $filename"
+#   base=`basename $filename _simple_noHead_seek.bed`
+#   #this first command is correcting for the bias of Tn5 cut sites, your output is a directory containing a *corrected.bw file and some others
+#   #peak bed must contain regions of interest which you would like to perform footprinting on
+#   TOBIAS ATACorrect --bam ${NPEAK_DIR}/consensus_sorted.bam \
+#   --genome ${GENOME} \
+#   --peaks ${BED_DIR}/${base}_simple_noHead_seek.bed \
+#   --outdir ${PROCESSED_DIR} \
+#   --prefix ${base} \
+#   --cores 8
+#   echo "done with $filename"
+#   mv ${BED_DIR}/${base}_simple_noHead_seek.bed ${BED_DIR}/done
+# done
+
+#footprint
+cd ${PROCESSED_DIR}
+for filename in *_corrected.bw
+do
+  echo "scoring footprints of $filename"
+  base=`basename $filename _corrected.bw`
+  TOBIAS FootprintScores --signal ${PROCESSED_DIR}/${base}_corrected.bw \
+  --regions ${BED_DIR}/done/${base}_simple_noHead_seek.bed \
+  --output ${base}_footprints.bw \
+  --cores 12
+  echo "end scoring $filename"
+done
+
+#comparison
+#WTvE545K
+for filename in *WT_enr_WTvE545K_footprints.bw
+do
+  cellline=`basename $filename WT_enr_WTvE545K_footprints.bw`
+  echo "comparing TFs across ${cellline} footprints"
+  TOBIAS BINDetect --motifs ${JASPAR} \
+  --signals ${PROCESSED_DIR}/${cellline}WT_enr_WTvE545K_footprints.bw \
+            ${PROCESSED_DIR}/${cellline}E545K_enr_WTvE545K_footprints.bw \
+  --genome ${GENOME} \
+  --peaks ${NPEAK_DIR}/consensus.narrowPeak \
+  --outdir ${PROCESSED_DIR}/comparative_motifs_${cellline}_WTvE545K \
+  --cond_names ${cellline}_WT_enr ${cellline}_E545K_enr \
+  --cores 12
+  echo "end comparative analyses of $cellline"
+done
+
+#WTvH1047R
+for filename in *WT_enr_WTvH1047R_footprints.bw
+do
+  cellline=`basename $filename WT_enr_WTvH1047R_footprints.bw`
+  echo "comparing TFs across ${cellline} footprints"
+  TOBIAS BINDetect --motifs ${JASPAR} \
+  --signals ${PROCESSED_DIR}/${cellline}WT_enr_WTvH1047R_footprints.bw \
+            ${PROCESSED_DIR}/${cellline}H1047R_enr_WTvH1047R_footprints.bw \
+  --genome ${GENOME} \
+  --peaks ${NPEAK_DIR}/consensus.narrowPeak \
+  --outdir ${PROCESSED_DIR}/comparative_motifs_${cellline}_WTvH1047R \
+  --cond_names ${cellline}_WT_enr ${cellline}_H1047R_enr \
+  --cores 12
+  echo "end comparative analyses of $cellline"
+done
+
+#E545KvH1047R
+for filename in *E545K_enr_E545KvH1047R_footprints.bw
+do
+  cellline=`basename $filename E545K_enr_E545KvH1047R_footprints.bw`
+  echo "comparing TFs across ${cellline} footprints"
+  TOBIAS BINDetect --motifs ${JASPAR} \
+  --signals ${PROCESSED_DIR}/${cellline}E545K_enr_E545KvH1047R_footprints.bw \
+            ${PROCESSED_DIR}/${cellline}H1047R_enr_E545KvH1047R_footprints.bw \
+  --genome ${GENOME} \
+  --peaks ${NPEAK_DIR}/consensus.narrowPeak \
+  --outdir ${PROCESSED_DIR}/comparative_motifs_${cellline}_E545KvH1047R \
+  --cond_names ${cellline}_E545K_enr ${cellline}_H1047R_enr \
+  --cores 12
+  echo "end comparative analyses of $cellline"
+done

@@ -1,0 +1,27 @@
+#!/bin/bash
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=1
+#SBATCH --time=12:00:00
+#SBATCH --mem=16G
+#SBATCH --job-name=trim_ATAC2_loop
+#SBATCH --output=trim_ATAC2_loop-%j.out
+#SBATCH --error=trim_ATAC2_loop-%j.error
+#SBATCH --mail-user=adam.x.miranda@vanderbilt.edu
+#SBATCH --mail-type=ALL
+#SBATCH --account=park_lab
+
+source /home/mirandax/.bashrc
+
+#establish variables
+FASTQCDIR='/data/park_lab/adam/ATAC2/trimmed_reads/fastQC'
+TRIMDIR='/data/park_lab/adam/ATAC2/trimmed_reads'
+#trim files and output fastQC
+cd /data/park_lab/adam/ATAC2/raw_reads
+for filename in *.fastq.gz
+do
+  base=`basename $filename .fastq.gz`
+  echo "begin trimming"
+  trim_galore --fastqc --fastqc_args "--outdir ${FASTQCDIR}" --dont_gzip --output_dir ${TRIMDIR} $filename
+  echo ${filename}
+done

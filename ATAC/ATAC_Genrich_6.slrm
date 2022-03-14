@@ -1,0 +1,52 @@
+#!/bin/bash
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=8
+#SBATCH --time=1-00:00:00
+#SBATCH --mem=32G
+#SBATCH --job-name=Genrich
+#SBATCH --output=Genrich-%j.out
+#SBATCH --error=Genrich-%j.error
+#SBATCH --mail-user=adam.x.miranda@vanderbilt.edu
+#SBATCH --mail-type=ALL
+#SBATCH --account=park_lab
+
+#this is to make the "narrowpeak" files that we will use as our peaks of interest
+#the peaks of interest will go into the TOBIAS footprinting analyses, as well as HOMER
+#Genrich is installed on my home and is loaded into .bashrc
+
+#change to directory with my filtered and combined
+IN_DIR='/data/park_lab/adam/ATAC/combined_reads'
+OUT_DIR='/data/park_lab/adam/ATAC/combined_reads/genrich'
+
+
+cd $IN_DIR
+module load GCC/8.2.0 SAMtools/1.9
+
+#bam files must be sorted prior to genrich
+for filename in *.bam
+do
+  base=`basename $filename .bam`
+  samtools sort -@ 8 -n ${IN_DIR}/${base}.bam > ${IN_DIR}/${base}.n-sorted.bam
+done
+
+#loop for genrich, using two different significance thresholds
+for filename in *.n-sorted.bam
+do
+  echo "genrich for ${filename} at .1 p-threshold"
+  base=`basename $filename .n-sorted.bam`
+  Genrich -t ${IN_DIR}/${base}.n-sorted.bam \
+          -o ${OUT_DIR}/${base}_filtered_0.1.narrowPeak \
+          -f ${OUT_DIR}/${base}_filtered_0.1.pqvalues.bed \
+          -r -e chrX,chrY \
+          -j -p 0.1 -v
+  echo "${filename} genrich complete for 0.1"
+
+  echo "genrich for ${filename} at .05 p-threshold"
+  Genrich -t ${IN_DIR}/${base}.n-sorted.bam \
+          -o ${OUT_DIR}/${base}_filtered_0.05.narrowPeak \
+          -f ${OUT_DIR}/${base}_filtered_0.05.pqvalues.bed \
+          -r -e chrX,chrY \
+          -j -p 0.05 -v
+  echo "${filename} genrich complete for 0.05"
+done

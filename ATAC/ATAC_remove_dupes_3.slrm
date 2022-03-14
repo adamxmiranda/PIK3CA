@@ -1,0 +1,29 @@
+#!/bin/bash
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=4
+#SBATCH --time=06:00:00
+#SBATCH --mem=64G
+#SBATCH --job-name=remove_dupes_loop
+#SBATCH --output=remove_dupes_loop-%j.out
+#SBATCH --error=remove_dupes_loop-%j.error
+#SBATCH --mail-user=adam.x.miranda@vanderbilt.edu
+#SBATCH --mail-type=ALL
+#SBATCH --account=park_lab
+
+#change to directory of filtered_reads
+cd /data/park_lab/adam/ATAC/filtered_reads
+
+#remove sequencing duplicates
+module load picard/2.18.27
+
+PICARD="$EBROOTPICARD/picard.jar"
+for filename in *_filtered.bam
+do
+  echo "removing sequencing duplicates"
+  echo ${filename}
+  base=`basename $filename _filtered.bam`
+  java -jar $PICARD MarkDuplicates I=${base}_filtered.bam O=${base}.unique.bam \
+  M=${base}_marked_dup_metrics-all.txt REMOVE_DUPLICATES=TRUE
+  echo "dupes removed"
+done

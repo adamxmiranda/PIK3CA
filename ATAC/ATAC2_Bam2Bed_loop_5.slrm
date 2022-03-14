@@ -1,0 +1,30 @@
+#!/bin/bash
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=1
+#SBATCH --time=1-00:00:00
+#SBATCH --mem=16G
+#SBATCH --job-name=bamToBed
+#SBATCH --output=bamToBed-%j.out
+#SBATCH --error=bamToBed-%j.error
+#SBATCH --mail-user=adam.x.miranda@vanderbilt.edu
+#SBATCH --mail-type=ALL
+#SBATCH --account=park_lab
+
+#load the modules for bedtools
+module load GCC/8.2.0 BEDTools/2.28.0
+
+#loop to convert bams to bed files to work
+cd /data/park_lab/adam/ATAC2/combined_reads
+#
+# for filename in *.bam
+# do
+#   echo "make bed files"
+#   echo ${filename}
+#   base=`basename $filename .bam`
+#   echo "${base}"
+#   bedtools bamtobed -i ${base}.bam > ${base}.bed
+#   echo "bed complete"
+# done
+
+bedtools bamtobed -i T47D.bam > T47D.bed

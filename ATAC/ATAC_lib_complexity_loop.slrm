@@ -1,0 +1,40 @@
+#!/bin/bash
+#SBATCH --mail-user=adam.x.miranda@vanderbilt.edu
+#SBATCH --mail-type=ALL
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=16G
+#SBATCH --time=3:00:00
+#SBATCH --output=complexity_%A.out
+#SBATCH --error=complexity_%A.err
+
+#This script will run the lc_extrap command to estimate the complexity of the library if I were to sequence at a greater depth
+#This script will also use picard's estimate library complexity tool as another way to measure complexity.
+#As an additional analysis, this script will also collect the distribution of the insert sizes.
+#The input is a pos sorted bam file and the output is a table (as .txt) that can be plotted in R
+#preseq is dependant on GSL, which is dependant on GCC. These are assembled into the preseq lmod collection.
+
+INPUT_DIR='/data/park_lab/adam/ATAC/filtered_reads'
+OUTPUT_DIR='/data/park_lab/adam/ATAC/complexity'
+
+cd /data/park_lab/adam/ATAC/filtered_reads
+
+for filename in *.bam
+do
+	base=`basename $filename .bam`
+	#lc_extrap (preseq)
+	module load GCC/8.2.0 GSL/2.5
+	echo ${filename}
+	preseq lc_extrap -pe -verbose -o ${OUTPUT_DIR}/${base}_lc-extrap-results.txt -bam ${INPUT_DIR}/${base}.bam
+  #c_curve (preseq)
+	preseq c_curve -pe -verbose -o ${OUTPUT_DIR}/${base}_c-curve-results.txt -bam ${INPUT_DIR}/${base}.bam
+
+  #picard estimate library complexity
+  module load picard/2.18.27
+	PICARD="$EBROOTPICARD/picard.jar"
+	java -jar $PICARD EstimateLibraryComplexity I=${INPUT_DIR}/${base}.bam O=${OUTPUT_DIR}/${base}_picard-ELC.txt
+
+  #picard collect insert-size-metrics
+	java -jar $PICARD CollectInsertSizeMetrics I=${INPUT_DIR}/${base}.bam H=${OUTPUT_DIR}/${base}_histogram.pdf O=${OUTPUT_DIR}/${base}_picard-CISM.txt
+done

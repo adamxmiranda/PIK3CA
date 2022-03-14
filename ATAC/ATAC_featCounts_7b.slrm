@@ -1,0 +1,37 @@
+#!/bin/bash
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=8
+#SBATCH --time=3:00:00
+#SBATCH --mem=32G
+#SBATCH --job-name=ATAC_featcounts
+#SBATCH --output=ATAC_featcounts-%j.out
+#SBATCH --error=ATAC_featcounts-%j.error
+#SBATCH --mail-user=adam.x.miranda@vanderbilt.edu
+#SBATCH --mail-type=ALL
+#SBATCH --account=park_lab
+
+
+GEN_DIR1='/data/park_lab/adam/ATAC/combined_reads/genrich'
+GEN_DIR2='/data/park_lab/adam/ATAC2/combined_reads/genrich'
+cd ${GEN_DIR1}
+BAM_DIR1='/data/park_lab/adam/ATAC/filtered_reads'
+BAM_DIR2='/data/park_lab/adam/ATAC2/filtered_reads'
+FEAT_DIR='/data/park_lab/adam/ATAC/featCounts'
+
+#Make consensus bed file
+cat ${GEN_DIR1}/*LG.narrowPeak \
+    ${GEN_DIR2}/*LG.narrowPeak > \
+    consensus.narrowPeak
+
+#Turn the consensus bed into saf for feature counts
+awk 'OFS="\t" {print $1"."$2"."$3, $1, $2, $3, "."}' consensus.narrowPeak > \
+    consensus.saf
+
+#feature counts for all bam files
+#move all bams used for LG peak calling to the same directory
+mv ${BAM_DIR2}/*.n-sorted.bam ${BAM_DIR1}
+#do the featcounts
+featureCounts -p -F SAF -T 8 -O -a ${GEN_DIR1}/consensus.saf \
+        -o ${FEAT_DIR}/ATAC_featureCounts.txt \
+        ${BAM_DIR1}/*.n-sorted.bam

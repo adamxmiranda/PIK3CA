@@ -1,0 +1,69 @@
+#!/bin/bash
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=8
+#SBATCH --time=1-00:00:00
+#SBATCH --mem=64G
+#SBATCH --job-name=MapnClean_ATAC_loop
+#SBATCH --output=MapnClean_ATAC_loop-%j.out
+#SBATCH --error=MapnClean_ATAC_loop-%j.error
+#SBATCH --mail-user=adam.x.miranda@vanderbilt.edu
+#SBATCH --mail-type=ALL
+#SBATCH --account=park_lab
+
+#mapping loop
+#load modules
+module load GCC/8.2.0 Bowtie2/2.3.5.1
+INDEX='/data/hodges_lab/hg38_genome/bt2/hg38'
+cd /data/park_lab/adam/ATAC/trimmed_reads
+MAPDIR='/data/park_lab/adam/ATAC/mapped_reads'
+
+for filename in *_S1_L005_R1_001_trimmed.fq
+do
+  base=`basename $filename _S1_L005_R1_001_trimmed.fq`
+  echo "begin mapping"
+  bowtie2 -p 8 -X 500 --sensitive --no-discordant --no-mixed -x $INDEX \
+  -1 ${base}_S1_L005_R1_001_trimmed.fq -2 ${base}_S1_L005_R2_001_trimmed.fq \
+  -S ${MAPDIR}/${base}.sam
+  echo ${filename}
+  echo "done mapping"
+done
+
+#map quality and filtering loop
+module load GCC/8.2.0 SAMtools/1.9
+cd ${MAPDIR}
+for filename in *.sam
+do
+  base=`basename $filename .sam`
+  echo "convert sam to bam & filter for MAPQ > 30 & sort bam"
+  samtools view -@ 8 -S -b -q 30 ${base}.sam > ${base}_mapq30.bam
+  samtools sort -@ 8 -o ${base}_mapq30_sorted.bam ${base}_mapq30.bam
+  echo " index sorted bam files"
+  samtools index -b ${base}.bam ${base}.bam.bai
+  echo "remove mtDNA reads"
+  samtools view -@ 8 -b ${base}.bam chr1 chr2 chr3 chr4 chr5 chr6 chr7 chr8 chr9 chr10 \
+  chr11 chr12 chr13 chr14 chr15 chr16 chr17 chr18 chr19 chr20 chr21 chr22 chrX chrY > ${base}.no_chrM.bam
+  echo "Index no_ChrM files"
+  samtools index -b ${base}.no_chrM.bam  ${base}.no_chrM.bam.bai
+  echo "remove blacklisted regions"
+  samtools view -@ 8 -b -L /data/hodges_lab/hg38_genome/hg38.blacklist.bed \
+  -U ${base}.filtered.unsorted.bam ${base}.no_chrM.bam > ${base}.blacklisted.bam
+  samtools sort -@ 8 ${base}.filtered.unsorted.bam > ${base}.filtered.bam
+  echo "Index filtered files"
+  samtools index -b ${base}.filtered.bam ${base}.filtered.bam.bai
+done
+
+#remove sequencing duplicates
+module load picard/2.18.27
+PICARD="$EBROOTPICARD/picard.jar"
+for filename in *.filtered.bam
+do
+  echo "removing sequencing duplicates"
+  echo ${filename}
+  base=`basename $filename .filtered.bam`
+  java -jar $PICARD MarkDuplicates I=${base}.filtered.bam O=${base}.no_SeqDup.bam \
+  M=${base}_marked_dup_metrics-optical.txt REMOVE_SEQUENCING_DUPLICATES=TRUE
+  java -jar $PICARD MarkDuplicates I=${base}.filtered.bam O=${base}.unique.bam \
+  M=${base}_marked_dup_metrics-all.txt REMOVE_DUPLICATES=TRUE
+  echo "dupes removed"
+done

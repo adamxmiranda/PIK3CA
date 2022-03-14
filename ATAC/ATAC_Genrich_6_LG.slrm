@@ -1,0 +1,73 @@
+#!/bin/bash
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=8
+#SBATCH --time=1-00:00:00
+#SBATCH --mem=32G
+#SBATCH --job-name=Genrich
+#SBATCH --output=Genrich-%j.out
+#SBATCH --error=Genrich-%j.error
+#SBATCH --mail-user=adam.x.miranda@vanderbilt.edu
+#SBATCH --mail-type=ALL
+#SBATCH --account=park_lab
+
+#this is to make the "narrowpeak" files that we will use as our peaks of interest
+#the peaks of interest will go into the TOBIAS footprinting analyses, as well as HOMER
+#Genrich is installed on my home and is loaded into .bashrc
+
+#change to directory with my filtered and combined
+IN_DIR='/data/park_lab/adam/ATAC/filtered_reads'
+OUT_DIR='/data/park_lab/adam/ATAC/combined_reads/genrich'
+
+#load SAMtools modules
+module load GCC/8.2.0 SAMtools/1.9
+
+cd ${IN_DIR}
+
+#bam files must be sorted prior to genrich
+for filename in *_bwa.unique.bam
+do
+  base=`basename $filename _bwa.unique.bam`
+  samtools sort -@ 8 -n ${IN_DIR}/${base}_bwa.unique.bam > ${IN_DIR}/${base}.n-sorted.bam
+done
+
+#genrich, using significance thresholds LG got from Harvard
+echo "genrich for MCF7_E545K at .05 p-threshold"
+Genrich -t ${IN_DIR}/6630-JK-1.n-sorted.bam,${IN_DIR}/6630-JK-2.n-sorted.bam \
+        -o ${OUT_DIR}/MCF7_E545K_LG.narrowPeak \
+        -f ${OUT_DIR}/MCF7_E545K_LG.pqvalues.bed \
+        -r -e chrX,chrY \
+        -j -p 0.005 -q .01 -v
+echo "MCF7_E545K genrich complete for LG"
+
+echo "genrich for MCF7_WT at .05 p-threshold"
+Genrich -t ${IN_DIR}/6630-JK-3.n-sorted.bam,${IN_DIR}/6630-JK-4.n-sorted.bam \
+        -o ${OUT_DIR}/MCF7_WT_LG.narrowPeak \
+        -f ${OUT_DIR}/MCF7_WT_LG.pqvalues.bed \
+        -r -e chrX,chrY \
+        -j -p 0.005 -q .01 -v
+echo "MCF7_WT genrich complete for LG"
+
+echo "genrich for H-Tert_WT at .05 p-threshold"
+Genrich -t ${IN_DIR}/6630-JK-5.n-sorted.bam,${IN_DIR}/6630-JK-6.n-sorted.bam \
+        -o ${OUT_DIR}/H-Tert_WT_LG.narrowPeak \
+        -f ${OUT_DIR}/H-Tert_WT_LG.pqvalues.bed \
+        -r -e chrX,chrY \
+        -j -p 0.005 -q .01 -v
+echo "H-Tert_WT genrich complete for LG"
+
+echo "genrich for H-Tert_E545K at .05 p-threshold"
+Genrich -t ${IN_DIR}/6630-JK-7.n-sorted.bam,${IN_DIR}/6630-JK-8.n-sorted.bam \
+        -o ${OUT_DIR}/H-Tert_E545K_LG.narrowPeak \
+        -f ${OUT_DIR}/H-Tert_E545K_LG.pqvalues.bed \
+        -r -e chrX,chrY \
+        -j -p 0.005 -q .01 -v
+echo "H-Tert_E545K genrich complete for LG"
+
+echo "genrich for H-Tert_H1047R at .05 p-threshold"
+Genrich -t ${IN_DIR}/6630-JK-9.n-sorted.bam,${IN_DIR}/6630-JK-11.n-sorted.bam \
+        -o ${OUT_DIR}/H-Tert_H1047R_LG.narrowPeak \
+        -f ${OUT_DIR}/H-Tert_H1047R_LG.pqvalues.bed \
+        -r -e chrX,chrY \
+        -j -p 0.005 -q .01 -v
+echo "H-Tert_H1047R genrich complete for LG"

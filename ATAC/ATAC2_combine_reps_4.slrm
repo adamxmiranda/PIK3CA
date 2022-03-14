@@ -1,0 +1,50 @@
+#!/bin/bash
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=8
+#SBATCH --time=3:00:00
+#SBATCH --mem=64G
+#SBATCH --job-name=combine_ATAC2_reps
+#SBATCH --output=combine_ATAC2_reps-%j.out
+#SBATCH --error=combine_ATAC2_reps-%j.error
+#SBATCH --mail-user=adam.x.miranda@vanderbilt.edu
+#SBATCH --mail-type=ALL
+#SBATCH --account=park_lab
+
+#load SAMtools modules
+module load GCC/8.2.0 SAMtools/1.9
+FILT_DIR='/data/park_lab/adam/ATAC2/filtered_reads'
+cd ${FILT_DIR}
+COMB_DIR='/data/park_lab/adam/ATAC2/combined_reads'
+
+# #Could not think of a great way to loop This
+# echo "first cell line"
+# samtools merge -f ${COMB_DIR}/MCF10A_WT.bam -@ 8 \
+# ${FILT_DIR}/6734-JK-1_bwa.unique.bam \
+# ${FILT_DIR}/6734-JK-2_bwa.unique.bam
+# echo "end first"
+#
+# echo "second cell line"
+# samtools merge -f ${COMB_DIR}/MCF10A_E545K.bam -@ 8 \
+# ${FILT_DIR}/6734-JK-3_bwa.unique.bam \
+# ${FILT_DIR}/6734-JK-4_bwa.unique.bam
+# echo "end second"
+
+# echo "third cell line"
+# samtools merge -f ${COMB_DIR}/MCF10A_H1047R.bam -@ 8 \
+# ${FILT_DIR}/6734-JK-5_bwa.unique.bam \
+# ${FILT_DIR}/6734-JK-6_bwa.unique.bam
+# echo "end third"
+
+echo "fourth cell line"
+samtools merge -f ${COMB_DIR}/T47D.bam -@ 8 \
+${FILT_DIR}/6734-JK-7_bwa.unique.bam \
+${FILT_DIR}/6734-JK-8_bwa.unique.bam
+echo "end fourth"
+
+#load the modules for bedtools
+module load GCC/8.2.0 BEDTools/2.28.0
+
+#loop to convert bams to bed files to work
+cd /data/park_lab/adam/ATAC2/combined_reads
+bedtools bamtobed -i T47D.bam > T47D.bed

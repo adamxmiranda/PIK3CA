@@ -1,0 +1,28 @@
+#!/bin/bash
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=12
+#SBATCH --time=1-00:00:00
+#SBATCH --mem=128G
+#SBATCH --job-name=motifsHOMER
+#SBATCH --output=motifsHOMER-%j.out
+#SBATCH --error=motifsHOMER-%j.error
+#SBATCH --mail-user=adam.x.miranda@vanderbilt.edu
+#SBATCH --mail-type=ALL
+#SBATCH --account=park_lab
+#SBATCH --job-name="motifsHOMER"
+
+AnalysisDIR='/data/park_lab/adam/ATAC/featCounts/enr_bed'
+OUTDIR='/data/park_lab/adam/ATAC/featCounts/HOMER_results'
+
+cd ${AnalysisDIR}
+# loop through files with the extension .bam
+for filename in *.bed
+do
+  echo "running HOMER for $filename"
+  echo ${filename}
+  base=`basename $filename .bed`
+  mkdir ${OUTDIR}/${base}
+  findMotifsGenome.pl $filename hg38 ${OUTDIR}/${base} -size given -p 12
+  echo "done running HOMER for $filename"
+done

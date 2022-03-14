@@ -1,0 +1,87 @@
+#!/bin/bash
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=12
+#SBATCH --time=1-00:00:00
+#SBATCH --mem=64G
+#SBATCH --job-name=BWA_MapnClean_ATAC_loop
+#SBATCH --output=BWA_MapnClean_ATAC_loop-%j.out
+#SBATCH --error=BWA_MapnClean_ATAC_loop-%j.error
+#SBATCH --mail-user=adam.x.miranda@vanderbilt.edu
+#SBATCH --mail-type=ALL
+#SBATCH --account=park_lab
+
+IN_DIR='/data/park_lab/adam/ATAC/trimmed_reads'
+cd ${IN_DIR}
+
+#loop for bbmap repair, removes singletons and sorts .fq files
+#satisfies whiny mapping alignment algorithms
+for filename in *_S1_L005_R1_001_trimmed.fq
+do
+  base=`basename $filename _S1_L005_R1_001_trimmed.fq`
+  echo "Can we fix it?"
+  echo $filename
+  #use bbmap_repair to filter mismatched reads
+  repair.sh in1=${base}_S1_L005_R1_001_trimmed.fq in2=${base}_S1_L005_R2_001_trimmed.fq \
+  out1=${base}_Mate1_repaired.fq out2=${base}_Mate2_repaired.fq \
+  outs=${base}_singletons.fq repair
+  echo "Yes we can!"
+done
+
+#directory to the mapped files files
+OUT_DIR='/data/park_lab/adam/ATAC/mapped_reads'
+########################################
+###BWA Stuff###
+########################################
+###updated
+REF='/data/park_lab/adam/Homo_sapiens/UCSC/hg38/Sequence/WholeGenomeFasta/genome.fa'
+###updated
+#directory of the park_lab hg38 index
+FAIDX='/data/park_lab/adam/Homo_sapiens/UCSC/hg38/Sequence/WholeGenomeFasta/genome.fa.fai'
+PREFIX='hg38'
+CPU=12
+
+#load BWA modules
+module load GCC/6.4.0-2.28
+module load BWA/0.7.17
+module load SAMtools/1.6
+#In the case I need to make another index
+# cd /home/mirandax/bwa_index/hg38
+# bwa index -a bwtsw -p $PREFIX $REF
+#BWA mapping loop
+for filename in *_Mate1_repaired.fq
+do
+  base=`basename $filename _Mate1_repaired.fq`
+  echo $filename
+  echo "let's map dis tang"
+  bwa mem -t $CPU $REF ${IN_DIR}/${base}_Mate1_repaired.fq ${IN_DIR}/${base}_Mate2_repaired.fq| samtools view -@ $CPU -Sb - > ${OUT_DIR}/${base}_bwa.bam
+  echo "end map"
+done
+
+#Filtering loop
+#Filtering for mapQ>40 (bwa max is 60)
+#Removes mitochondrial DNA
+#Removes blacklisted sites
+module load GCC/8.2.0 SAMtools/1.9
+cd ${OUT_DIR}
+FILT_DIR='/data/park_lab/adam/ATAC/filtered_reads'
+for filename in *_bwa.bam
+do
+  base=`basename $filename _bwa.bam`
+  echo "convert sam to bam & filter for MAPQ > 40 & sort bam"
+  samtools view -@ $CPU -S -b -q 40 ${base}_bwa.bam > ${base}_bwa_mapq40.bam
+  samtools sort -@ $CPU -o ${base}_bwa_mapq40_sorted.bam ${base}_bwa_mapq40.bam
+  echo " index sorted bam files"
+  samtools index -b ${base}_bwa_mapq40_sorted.bam ${base}_bwa_mapq40_sorted.bam.bai
+  echo "remove mtDNA reads"
+  samtools view -@ $CPU -b ${base}_bwa_mapq40_sorted.bam chr1 chr2 chr3 chr4 chr5 chr6 chr7 chr8 chr9 chr10 \
+  chr11 chr12 chr13 chr14 chr15 chr16 chr17 chr18 chr19 chr20 chr21 chr22 chrX chrY > ${base}_bwa_no_chrM.bam
+  echo "Index no_ChrM files"
+  samtools index -b ${base}_bwa_no_chrM.bam  ${base}_bwa_no_chrM.bam.bai
+  echo "remove blacklisted regions"
+  samtools view -@ $CPU -b -L /data/hodges_lab/hg38_genome/hg38.blacklist.bed \
+  -U ${base}_bwa_filtered.unsorted.bam ${base}_bwa_no_chrM.bam > ${base}_bwa_blacklisted.bam
+  samtools sort -@ $CPU ${base}_bwa_filtered.unsorted.bam > ${FILT_DIR}/${base}_bwa_filtered.bam
+  echo "Index filtered files"
+  samtools index -b ${FILT_DIR}/${base}_bwa_filtered.bam ${FILT_DIR}/${base}.filtered.bam.bai
+done
