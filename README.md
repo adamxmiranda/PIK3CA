@@ -116,7 +116,7 @@ Total_RNA_Pathway_Specific.ipynb
 Analyses looking to combine the results of the RNA-seq and ATAC-seq data can be found in
 
 ```bash
-DATA!_Unite.ipynb
+DATA_Unite.ipynb
 ```
 
 ## Hi-C
