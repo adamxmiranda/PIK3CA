@@ -2,6 +2,13 @@
 
 This repo contains my code for functional genomic analysis of my multi-lineage *PIK3CA* isogenic cell line model.
 
+## For analyses specifically included in the publication: ID# *pending* please the the folder titled Publication
+
+
+
+## The rest of this repo contains code from the project at large. Some of which is not included in the final analyses for the paper
+
+
 ## Cell Line Model
 
 For this inquiry, we make use of a multi-lineage isogenic cell line model. In this model, we have cell lines of three different breast cell lineages representing each of the three different PIK3CA genotypes of interest(WT, E545K, H1047R). A breakdown of the lineages and genotypes used in our study can be found in the table below:
