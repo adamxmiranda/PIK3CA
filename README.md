@@ -6,7 +6,7 @@ This repo contains my code for functional genomic analysis of my multi-lineage *
 
 
 
-## The rest of this repo contains code from the project at large. Some of which is not included in the final analyses for the paper
+## The rest of this repo contains code from the project at large. The preprocessing of fastq files is used in the analyses used in the publication. Some data/cell lines are not included in the final analyses for the paper.
 
 
 ## Cell Line Model
