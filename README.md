@@ -2,7 +2,7 @@
 
 This repo contains my code for functional genomic analysis of my multi-lineage *PIK3CA* isogenic cell line model.
 
-## For analyses specifically included in the publication: ID# *pending* please the the folder titled Publication
+## For analyses specifically included in the publication: ID# *pending* please see the folder titled Publication
 
 
 
